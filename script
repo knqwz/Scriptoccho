@@ -1,0 +1,110 @@
+local p = game:GetService("Players")
+local lp = p.LocalPlayer
+local rs = game:GetService("RunService")
+local pg = lp:WaitForChild("PlayerGui")
+local en = false
+local db = false
+
+-- 1. UI CHÍNH (Hình chữ nhật 10/4 - Tên knqwz to)
+local sg = Instance.new("ScreenGui", pg)
+sg.Name = "knqwz_Final"
+sg.ResetOnSpawn = false
+
+local mainFrame = Instance.new("Frame", sg)
+Instance.new("UICorner", mainFrame)
+mainFrame.Size = UDim2.new(0, 220, 0, 90) -- Tỉ lệ dài 10 rộng ~4
+mainFrame.Position = UDim2.new(0.5, -110, 0.5, -45)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+mainFrame.Active = true
+mainFrame.Draggable = true
+
+local t = Instance.new("TextLabel", mainFrame)
+t.Text = "knqwz" -- Tên mới viết thường
+t.Size = UDim2.new(1, 0, 0, 45) -- Chiếm nửa trên khung
+t.BackgroundTransparency = 1
+t.TextColor3 = Color3.fromRGB(255, 255, 255)
+t.TextSize = 30 -- Kích cỡ chữ knqwz rất to
+t.Font = Enum.Font.GothamBold
+
+local b = Instance.new("TextButton", mainFrame)
+b.Text = "Tắt"
+b.Size = UDim2.new(0, 180, 0, 35) -- Nút bấm to gần bằng chiều ngang khung
+b.Position = UDim2.new(0.5, -90, 0.55, 0)
+b.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+b.TextColor3 = Color3.fromRGB(255, 255, 255)
+b.TextSize = 22 -- Chữ Bật/Tắt to hơn
+b.Font = Enum.Font.GothamBold
+Instance.new("UICorner", b)
+
+-- 2. NÚT ÁM SÁT (Chữ cực to bám sát viền)
+local killBtn = Instance.new("TextButton", sg)
+killBtn.Size = UDim2.new(0, 115, 0, 115)
+killBtn.Position = UDim2.new(0.8, 0, 0.5, 0)
+killBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+killBtn.Text = "ÁM SÁT"
+killBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+killBtn.Font = Enum.Font.GothamBold
+killBtn.TextSize = 26 -- Chữ to quá cỡ theo ý bạn
+killBtn.TextScaled = true -- Ép chữ to hết mức có thể trong vòng tròn
+killBtn.Visible = false
+killBtn.Active = true
+killBtn.Draggable = true
+
+Instance.new("UICorner", killBtn).CornerRadius = UDim.new(1, 0)
+local stroke = Instance.new("UIStroke", killBtn)
+stroke.Thickness = 5
+stroke.Color = Color3.fromRGB(255, 255, 255)
+
+b.MouseButton1Click:Connect(function()
+    en = not en
+    b.Text = en and "Bật" or "Tắt"
+    b.BackgroundColor3 = en and Color3.fromRGB(0, 180, 0) or Color3.fromRGB(200, 0, 0)
+    killBtn.Visible = en
+end)
+
+-- 3. LOGIC HIỆN NGƯỜI & NO STUN
+rs.RenderStepped:Connect(function()
+    if en then
+        -- Anti-Invis (Từ ảnh bạn tìm)
+        for _, player in ipairs(p:GetPlayers()) do
+            if player ~= lp and player.Character then
+                for _, part in ipairs(player.Character:GetDescendants()) do
+                    if (part:IsA("BasePart") or part:IsA("Decal")) and part.Transparency > 0 then
+                        part.Transparency = 0
+                    end
+                end
+            end
+        end
+        -- No Stun: Luôn giữ tốc độ tối thiểu là 16
+        if lp.Character and lp.Character:FindFirstChild("Humanoid") then
+            if lp.Character.Humanoid.WalkSpeed < 16 then
+                lp.Character.Humanoid.WalkSpeed = 16
+            end
+        end
+    end
+end)
+
+-- 4. LOGIC ÁM SÁT FIX LỖI
+killBtn.MouseButton1Click:Connect(function()
+    if db or not en then return end
+    db = true
+    local target, minDist = nil, math.huge
+    for _, player in ipairs(p:GetPlayers()) do
+        if player ~= lp and player.Character and player.Character:FindFirstChild("Humanoid") then
+            if player.Character.Humanoid.Health > 0 and player.Character:FindFirstChild("HumanoidRootPart") then
+                local dist = (lp.Character.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude
+                if dist < minDist then
+                    minDist, target = dist, player
+                end
+            end
+        end
+    end
+    if target and lp.Character:FindFirstChild("HumanoidRootPart") then
+        lp.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 2.5)
+        lp.Character.Humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+        local sword = lp.Character:FindFirstChildOfClass("Tool")
+        if sword then sword:Activate() end
+    end
+    task.wait(0.5)
+    db = false
+end)
